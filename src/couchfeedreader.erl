@@ -13,7 +13,7 @@ unfollow_feed(Name) ->
   supervisor:terminate_child(couchfeedreader_sup, Name).
 list_feeds() -> 
   Specs = supervisor:which_children(couchfeedreader_sup),
-  lists:map(fun({Id,_,_,_}) -> Id end, Specs).
+  lists:map(fun({Id,Pid,_,_}) -> {Id, Pid} end, Specs).
 feed_info(Name) ->
   {ok, Spec} = supervisor:get_childspec(couchfeedreader_sup, Name), 
   Args = element(3,maps:get(start, Spec)),

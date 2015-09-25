@@ -47,9 +47,9 @@ handle_info(_,_) -> error(undef).
 
 code_change(_, State,_) -> {ok, State}.
 
-terminate(_,State) ->
-  httpc:cancel_request(State#server_state.feedref).
-
+terminate(_,#server_state{feedref = FeedRef}) ->
+  httpc:cancel_request(FeedRef);
+terminate(_,_) -> {}.
 
 decode_stream(Stream, Terms) ->
   try jsx:decode(Stream, [strict, return_tail]) of

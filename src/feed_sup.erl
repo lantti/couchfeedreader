@@ -20,7 +20,7 @@
 %%====================================================================
 
 start_link(Url, Workers) ->
-    supervisor:start_link({local, ?SERVER}, ?MODULE, [Url, Workers]).
+    supervisor:start_link(?MODULE, [Url, Workers]).
 
 %%====================================================================
 %% Supervisor callbacks
