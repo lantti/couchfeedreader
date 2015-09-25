@@ -1,8 +1,6 @@
 -module ('couchfeedreader').
 
--include("couchfeedreader.hrl").
-
--export([start/0, stop/0, follow_feed/3, unfollow_feed/1, list_feeds/0]).
+-export([start/0, stop/0, follow_feed/3, unfollow_feed/1, list_feeds/0, feed_info/1]).
 
 
 start() -> application:ensure_all_started(couchfeedreader).
@@ -13,4 +11,10 @@ follow_feed(Name, Url, Workers) ->
   supervisor:start_child(couchfeedreader_sup, {Name, {feed_sup, start_link, [Url, Workers]}, permanent, 10000, supervisor, [feed_sup]}).
 unfollow_feed(Name) -> 
   supervisor:terminate_child(couchfeedreader_sup, Name).
-list_feeds() -> supervisor:which_children(couchfeedreader_sup).
+list_feeds() -> 
+  Specs = supervisor:which_children(couchfeedreader_sup),
+  lists:map(fun({Id,_,_,_}) -> Id end, Specs).
+feed_info(Name) ->
+  {ok, Spec} = supervisor:get_childspec(couchfeedreader_sup, Name), 
+  Args = element(3,maps:get(start, Spec)),
+  {Name, hd(Args), lists:nth(2,Args)}.

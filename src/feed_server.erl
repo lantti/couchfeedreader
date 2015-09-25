@@ -2,8 +2,6 @@
 
 -behaviour(gen_server).
 
--include("couchfeedreader.hrl").
-
 -export([start_link/3, init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 
 -define(HTTPC_HTTP_OPTS, []).
@@ -13,7 +11,7 @@
 -record(worker_info, {mod, pid}). 
 
 
-start_link(Sup, Url, Workers) -> gen_server:start_link({local, ?FEED_SERVER_ID}, ?MODULE, [Sup, Url, Workers], []).
+start_link(Sup, Url, Workers) -> gen_server:start_link(?MODULE, [Sup, Url, Workers], []).
 
 init([Sup, Url, Workers]) -> 
   self() ! {do_nonblocking_init, Sup, Url, Workers},
