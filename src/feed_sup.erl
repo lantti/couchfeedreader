@@ -1,14 +1,14 @@
 %%%-------------------------------------------------------------------
-%% @doc couchfeedreader top level supervisor.
+%% @doc couchfeedreader per feed supervisor.
 %% @end
 %%%-------------------------------------------------------------------
 
--module('couchfeedreader_sup').
+-module('feed_sup').
 
 -behaviour(supervisor).
 
 %% API
--export([start_link/0]).
+-export([start_link/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -19,8 +19,8 @@
 %% API functions
 %%====================================================================
 
-start_link() ->
-    supervisor:start_link({local, ?SERVER}, ?MODULE, []).
+start_link(Url, Workers) ->
+    supervisor:start_link({local, ?SERVER}, ?MODULE, [Url, Workers]).
 
 %%====================================================================
 %% Supervisor callbacks
@@ -28,8 +28,8 @@ start_link() ->
 
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 
-init([]) ->
-    {ok, {{one_for_one, 2, 4}, []}}.
+init([Url, Workers]) ->
+    {ok, {{one_for_all, 2, 4}, [{feed_server, {feed_server, start_link, [self(), Url, Workers]}, permanent, 2000, worker, [feed_server]}]}}.
 
 %%====================================================================
 %% Internal functions
