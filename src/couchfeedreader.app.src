@@ -1,0 +1,19 @@
+{application, 'couchfeedreader',
+ [{description, "Read couchdb feeds and start workers accordingly"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, {'couchfeedreader_app', []}},
+  {applications,
+   [kernel,
+    stdlib,
+    sasl,
+    inets,
+    jsx
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {contributors, []},
+  {licenses, []},
+  {links, []}
+ ]}.
