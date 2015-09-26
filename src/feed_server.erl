@@ -37,10 +37,10 @@ handle_info({http,{_, stream, Stream}}, State) ->
   {noreply, State#server_state{leftovers = NewLeftovers}};
 
 handle_info({http,{_, stream_end, _}}, State) ->
-  {stop, State};
+  {stop, end_of_feed, State};
 
-handle_info({http,{_, {error,_}}}, State) ->
-  {stop, State};
+handle_info({http,{_, {error, Error}}}, State) ->
+  {stop, {feed_error, Error}, State};
 
 handle_info(_,_) -> error(undef).
 
