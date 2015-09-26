@@ -62,5 +62,5 @@ decode_stream(Stream, Terms) ->
 
 start_worker(Sup, WorkerMod) ->
   MFA = {WorkerMod, start_link, []},
-  {ok, Pid} = supervisor:start_child(Sup, {WorkerMod, {worker_sup, start_link, [MFA]}, permanent, 10000, supervisor, [worker_sup]}),
+  {ok, Pid} = supervisor:start_child(Sup, {WorkerMod, {worker_sup, start_link, [MFA]}, temporary, 10000, supervisor, [worker_sup]}),
   #worker_info{mod = WorkerMod, pid = Pid}.
