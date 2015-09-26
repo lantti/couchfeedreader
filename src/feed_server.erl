@@ -2,19 +2,19 @@
 
 -behaviour(gen_server).
 
--export([start_link/3, init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
+-export([start_link/4, init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 
 -define(HTTPC_HTTP_OPTS, []).
 -define(HTTPC_OPT_OPTS, [{sync, false}, {stream, self}]).
 
--record(server_state, {url, feedref, leftovers, workers}).
+-record(server_state, {name, url, feedref, leftovers, workers}).
 -record(worker_info, {mod, pid}). 
 
 
-start_link(Sup, Url, Workers) -> gen_server:start_link(?MODULE, [Sup, Url, Workers], []).
+start_link(Sup, Name, Url, Workers) -> gen_server:start_link(?MODULE, [Sup, Name, Url, Workers], []).
 
-init([Sup, Url, Workers]) -> 
-  self() ! {do_nonblocking_init, Sup, Url, Workers},
+init([Sup, Name, Url, Workers]) -> 
+  self() ! {do_nonblocking_init, Sup, Name, Url, Workers},
   {ok, undefined}.
 
 
@@ -22,10 +22,10 @@ handle_call(_,_,_) -> error(undef).
 handle_cast(_,_) -> error(undef).
 
 
-handle_info({do_nonblocking_init, Sup, Url, Workers},_) ->
+handle_info({do_nonblocking_init, Sup, Name, Url, Workers},_) ->
   ReadyWorkers = lists:map(fun(Mod) -> start_worker(Sup, Mod) end, Workers),
   {ok, FeedRef} = httpc:request(get, {Url, []}, ?HTTPC_HTTP_OPTS, ?HTTPC_OPT_OPTS),
-  {noreply, #server_state{url = Url, feedref = FeedRef, leftovers = <<"">>, workers = ReadyWorkers}};
+  {noreply, #server_state{name = Name, url = Url, feedref = FeedRef, leftovers = <<"">>, workers = ReadyWorkers}};
 
 handle_info({http,{_, stream_start, _}}, State) ->
   {noreply, State};
@@ -37,7 +37,8 @@ handle_info({http,{_, stream, Stream}}, State) ->
   {noreply, State#server_state{leftovers = NewLeftovers}};
 
 handle_info({http,{_, stream_end, _}}, State) ->
-  {stop, normal, State};
+  supervisor:terminate_child(couchfeedreader_sup, State#server_state.name),
+  {noreply, State};
 
 handle_info({http,{_, {error, Error}}}, State) ->
   {stop, {feed_error, Error}, State};

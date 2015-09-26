@@ -8,7 +8,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/2]).
+-export([start_link/3]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -19,8 +19,8 @@
 %% API functions
 %%====================================================================
 
-start_link(Url, Workers) ->
-    supervisor:start_link(?MODULE, [Url, Workers]).
+start_link(Name, Url, Workers) ->
+    supervisor:start_link(?MODULE, [Name, Url, Workers]).
 
 %%====================================================================
 %% Supervisor callbacks
@@ -28,8 +28,8 @@ start_link(Url, Workers) ->
 
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 
-init([Url, Workers]) ->
-    {ok, {{one_for_all, 2, 4}, [{feed_server, {feed_server, start_link, [self(), Url, Workers]}, permanent, 2000, worker, [feed_server]}]}}.
+init([Name, Url, Workers]) ->
+    {ok, {{one_for_all, 2, 4}, [{feed_server, {feed_server, start_link, [self(), Name, Url, Workers]}, permanent, 2000, worker, [feed_server]}]}}.
 
 %%====================================================================
 %% Internal functions
