@@ -15,16 +15,21 @@ start_link(Sup, Name, Url, Workers) -> gen_server:start_link(?MODULE, [Sup, Name
 
 init([Sup, Name, Url, Workers]) -> 
   self() ! {do_nonblocking_init, Sup, Name, Url, Workers},
-  {ok, undefined}.
+  case httpc:request(get, {Url, []}, ?HTTPC_HTTP_OPTS, ?HTTPC_OPT_OPTS) of
+    {ok, FeedRef} ->
+      {ok, {blocking_init_done, FeedRef}};
+    {error, Error} ->
+%%      supervisor:terminate_child(couchfeedreader_sup, Name),
+      {stop, Error}
+  end.
 
 
 handle_call(_,_,_) -> error(undef).
 handle_cast(_,_) -> error(undef).
 
 
-handle_info({do_nonblocking_init, Sup, Name, Url, Workers},_) ->
+handle_info({do_nonblocking_init, Sup, Name, Url, Workers}, {blocking_init_done, FeedRef}) ->
   ReadyWorkers = lists:map(fun(Mod) -> start_worker(Sup, Mod) end, Workers),
-  {ok, FeedRef} = httpc:request(get, {Url, []}, ?HTTPC_HTTP_OPTS, ?HTTPC_OPT_OPTS),
   {noreply, #server_state{name = Name, url = Url, feedref = FeedRef, leftovers = <<"">>, workers = ReadyWorkers}};
 
 handle_info({http,{_, stream_start, _}}, State) ->
