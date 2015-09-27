@@ -40,6 +40,11 @@ handle_info({http,{_, stream_end, _}}, State) ->
   supervisor:terminate_child(couchfeedreader_sup, State#server_state.name),
   {noreply, State};
 
+handle_info({http,{_, {{_,Status, Reason},_,_}}}, State) ->
+  io:format("Status: ~p, Reason: ~p~n", [Status, Reason]),
+  supervisor:terminate_child(couchfeedreader_sup, State#server_state.name),
+  {noreply, State};
+
 handle_info({http,{_, {error, Error}}}, State) ->
   {stop, {feed_error, Error}, State};
 

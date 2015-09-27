@@ -29,7 +29,7 @@ start_link(Name, Url, Workers) ->
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 
 init([Name, Url, Workers]) ->
-    {ok, {{one_for_all, 2, 4}, [{feed_server, {feed_server, start_link, [self(), Name, Url, Workers]}, permanent, 2000, worker, [feed_server]}]}}.
+    {ok, {{one_for_all, 1, 5}, [{feed_server, {feed_server, start_link, [self(), Name, Url, Workers]}, permanent, 2000, worker, [feed_server]}]}}.
 
 %%====================================================================
 %% Internal functions
