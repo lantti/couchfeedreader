@@ -1,3 +1,7 @@
+%%%-------------------------------------------------------------------
+%% @doc couchfeedreader worker process supervisor
+%% @end
+%%%-------------------------------------------------------------------
 -module('worker_sup').
 -behaviour(supervisor).
 

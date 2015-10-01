@@ -1,30 +1,36 @@
+%%%-------------------------------------------------------------------
+%% @doc example of a couchfeedreader worker process
+%% @end
+%%%-------------------------------------------------------------------
 -module('example_worker1').
 
 -behaviour(gen_server).
 
 -export([start_link/1, init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 
-start_link(State) -> gen_server:start_link(?MODULE, [State], []).
+start_link(_) -> gen_server:start_link(?MODULE, [], []).
 
-init(State) ->
+init(_) ->
   self() ! do_work,
-  io:format("Example worker got started.~n"),
-  {ok, State}.
+  Ref = make_ref(),
+  io:format("Example worker ~w got started.~n", [Ref]),
+  {ok, Ref}.
 
-handle_call(Request, From, State) -> io:format("Example worker got call ~p from ~w.~n", [Request, From]),
-                                     {reply, cool, State}.
+handle_call(Request, From, Ref) -> io:format("Example worker ~w got call ~p from ~w.~n", [Ref, Request, From]),
+                                     {reply, cool, Ref}.
 
-handle_cast(Request, State) -> io:format("Example worker got cast ~p.~n", [Request]),
-                               {noreply, State}.
+handle_cast(Request, Ref) -> io:format("Example worker ~w got cast ~p.~n", [Ref, Request]),
+                               {noreply, Ref}.
 
-handle_info(do_work, State) -> 
-  io:format("Example worker working.~n"),
-  {stop, normal, State};
-handle_info(Info, State) -> 
-  io:format("Example worker got info ~p.~n", [Info]),
-  {noreply, State}.
+handle_info(do_work, Ref) -> 
+  io:format("Example worker ~w working.~n",[Ref]),
+  timer:sleep(1000),
+  {stop, normal, Ref};
+handle_info(Info, Ref) -> 
+  io:format("Example worker ~w got info ~p.~n", [Ref, Info]),
+  {noreply, Ref}.
 
-code_change(_, State,_) -> {ok, State}.
+code_change(_, Ref,_) -> {ok, Ref}.
 
-terminate(Reason, _) -> io:format("Example worker got terminated with ~p.~n", [Reason]).
+terminate(Reason, Ref) -> io:format("Example worker ~w got terminated with ~p.~n", [Ref, Reason]).
 

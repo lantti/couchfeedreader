@@ -1,3 +1,7 @@
+%%%-------------------------------------------------------------------
+%% @doc couchfeedreader public API
+%% @end
+%%%-------------------------------------------------------------------
 -module ('couchfeedreader').
 
 -export([start/0, stop/0, follow_feed/3, unfollow_feed/1, list_feeds/0, feed_info/1]).

@@ -1,3 +1,7 @@
+%%%-------------------------------------------------------------------
+%% @doc couchfeedreader main per feed server
+%% @end
+%%%-------------------------------------------------------------------
 -module('feed_server').
 
 -behaviour(gen_server).
@@ -11,26 +15,19 @@
 -record(worker_info, {mod, pid}). 
 
 
-start_link(Sup, Name, Url, Workers) -> gen_server:start_link(?MODULE, [Sup, Name, Url, Workers], []).
+start_link(Sup, Name, Url, Workers) ->
+  proc_lib:start_link(?MODULE, init, [[Sup, Name, Url, Workers]]).
 
 init([Sup, Name, Url, Workers]) -> 
-  self() ! {do_nonblocking_init, Sup, Name, Url, Workers},
-  case httpc:request(get, {Url, []}, ?HTTPC_HTTP_OPTS, ?HTTPC_OPT_OPTS) of
-    {ok, FeedRef} ->
-      {ok, {blocking_init_done, FeedRef}};
-    {error, Error} ->
-%%      supervisor:terminate_child(couchfeedreader_sup, Name),
-      {stop, Error}
-  end.
+  {ok, FeedRef} = httpc:request(get, {Url, []}, ?HTTPC_HTTP_OPTS, ?HTTPC_OPT_OPTS),
+  proc_lib:init_ack(Sup, {ok, self()}),
+  ReadyWorkers = lists:map(fun(Mod) -> start_worker(Sup, Mod) end, Workers),
+  gen_server:enter_loop(?MODULE, [], #server_state{name = Name, url = Url, feedref = FeedRef, leftovers = <<"">>, workers = ReadyWorkers}).
 
 
 handle_call(_,_,_) -> error(undef).
 handle_cast(_,_) -> error(undef).
 
-
-handle_info({do_nonblocking_init, Sup, Name, Url, Workers}, {blocking_init_done, FeedRef}) ->
-  ReadyWorkers = lists:map(fun(Mod) -> start_worker(Sup, Mod) end, Workers),
-  {noreply, #server_state{name = Name, url = Url, feedref = FeedRef, leftovers = <<"">>, workers = ReadyWorkers}};
 
 handle_info({http,{_, stream_start, _}}, State) ->
   {noreply, State};
@@ -42,6 +39,7 @@ handle_info({http,{_, stream, Stream}}, State) ->
   {noreply, State#server_state{leftovers = NewLeftovers}};
 
 handle_info({http,{_, stream_end, _}}, State) ->
+  wait_for_workers(State#server_state.workers),
   supervisor:terminate_child(couchfeedreader_sup, State#server_state.name),
   {noreply, State};
 
@@ -75,3 +73,13 @@ start_worker(Sup, WorkerMod) ->
   MFA = {WorkerMod, start_link, []},
   {ok, Pid} = supervisor:start_child(Sup, {WorkerMod, {worker_sup, start_link, [MFA]}, temporary, 10000, supervisor, [worker_sup]}),
   #worker_info{mod = WorkerMod, pid = Pid}.
+
+wait_for_workers(Workers) ->
+  StillActive = lists:foldl(fun(#worker_info{pid=W}, C) -> C + proplists:get_value(active, supervisor:count_children(W)) end, 0, Workers),
+  if 
+    StillActive > 0 ->
+      timer:sleep(1000),
+      wait_for_workers(Workers);
+    true ->
+      ok
+  end.
