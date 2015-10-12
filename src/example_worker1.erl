@@ -6,31 +6,45 @@
 
 -behaviour(gen_server).
 
--export([start_link/1, init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
+-export([prepare_start/0, start_link/2, init/1, handle_call/3, 
+	 handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 
-start_link(_) -> gen_server:start_link(?MODULE, [], []).
+%%Run in the feed_server process before starting the worker supervisor 
+%%for this type of worker. All worker modules must successfully return 
+%%from their prepare_start in order for the feed processing to start.
+prepare_start() ->
+    io:format("Worker module ~w preparing for work.~n", [?MODULE]),
+    ETStab =
+	ets:new(example_worker1, [public, named_table]),
+    {ok, ETStab}.
 
-init(_) ->
-  self() ! do_work,
-  Ref = make_ref(),
-  io:format("Example worker ~w got started.~n", [Ref]),
-  {ok, Ref}.
+start_link(ETStab, Term) ->
+    gen_server:start_link(?MODULE, [ETStab, Term], []).
 
-handle_call(Request, From, Ref) -> io:format("Example worker ~w got call ~p from ~w.~n", [Ref, Request, From]),
-                                     {reply, cool, Ref}.
+init([ETStab, Term]) ->
+    self() ! do_work,
+    Ref = make_ref(),
+    io:format("Example worker ~w got started.~n", [Ref]),
+    {ok, {ETStab, Term, Ref}}.
 
-handle_cast(Request, Ref) -> io:format("Example worker ~w got cast ~p.~n", [Ref, Request]),
-                               {noreply, Ref}.
+handle_call(Request, From, {ETStab, Term, Ref}) ->
+    io:format("Example worker ~w got call ~p from ~w.~n", [Ref, Request, From]),
+    {reply, cool, {ETStab, Term, Ref}}.
 
-handle_info(do_work, Ref) -> 
-  io:format("Example worker ~w working.~n",[Ref]),
-  timer:sleep(1000),
-  {stop, normal, Ref};
-handle_info(Info, Ref) -> 
-  io:format("Example worker ~w got info ~p.~n", [Ref, Info]),
-  {noreply, Ref}.
+handle_cast(Request, {ETStab, Term, Ref}) ->
+    io:format("Example worker ~w got cast ~p.~n", [Ref, Request]),
+    {noreply, {ETStab, Term, Ref}}.
 
-code_change(_, Ref,_) -> {ok, Ref}.
+handle_info(do_work, {ETStab, Term, Ref}) -> 
+    io:format("Example worker ~w working on:~n ~p.~n",[Ref, Term]),
+    timer:sleep(1000),
+    {stop, normal, {ETStab, Term, Ref}};
 
-terminate(Reason, Ref) -> io:format("Example worker ~w got terminated with ~p.~n", [Ref, Reason]).
+handle_info(Info, {ETStab, Term, Ref}) -> 
+    io:format("Example worker ~w got info ~p.~n", [Ref, Info]),
+    {noreply, {ETStab, Term, Ref}}.
 
+code_change(_,S,_) -> {ok, S}.
+
+terminate(Reason, {_,_, Ref}) ->
+    io:format("Example worker ~w got terminated with ~p.~n", [Ref, Reason]).
