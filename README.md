@@ -1,9 +1,4 @@
 couchfeedreader
 =====
 
-An OTP application
-
-Build
------
-
-    $ rebar3 compile
+An OTP application to read couchdb feeds and start worker processes
